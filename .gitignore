@@ -1,0 +1,17 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/pixelart3d
+pixelart3d.so
+pixelart3d.dylib
+pixelart3d.dll
+pixelart3d.a
+pixelart3d.lib
+pixelart3d-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
+shapes/
