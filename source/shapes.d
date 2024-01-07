@@ -24,6 +24,7 @@ struct Shape
 	double[2][] vertices;
 	ushort[] rawIndices;
 	BitArray isMoveTo;
+	bool[4] sidesFullyOpen;
 	bool[4] sidesClosed;
 	bool reverseIndices;
 
@@ -195,15 +196,20 @@ struct Shape
 	void recomputeSidesClosed()
 	in (vertices.length)
 	{
+		sidesFullyOpen[] = false;
 		sidesClosed[] = false;
 		// for all sides: interval that is covered - almost no support for gaps
 		// and heavily dependent on sorting if a side is comprised of more than
 		// 2 lines
 		float[2][4] rangeSidesCovered = 0;
+		size_t polygonStart = 0;
 		foreach (i; 0 .. vertices.length)
 		{
+			if (isMoveTo[i])
+				polygonStart = i;
+
 			auto a = vertices[i];
-			auto b = vertices[i == $ - 1 ? 0 : i + 1];
+			auto b = vertices[i == $ - 1 || isMoveTo[i + 1] ? polygonStart : i + 1];
 			Side side;
 			double lower, upper;
 			if (isClose(a[0], b[0]))
@@ -251,8 +257,12 @@ struct Shape
 		// trace(name, ": ", rangeSidesCovered);
 
 		foreach (i, range; rangeSidesCovered)
+		{
 			if (range[0] <= 0.001 && range[1] >= 0.999)
 				sidesClosed[i] = true;
+			if (range[0] is range[1] || isClose(range[0], range[1], 0.001))
+				sidesFullyOpen[i] = true;
+		}
 		// trace("-> ", sidesClosed);
 	}
 
@@ -277,6 +287,12 @@ struct Shape
 		sidesClosed[2] = original[1];
 		sidesClosed[3] = original[2];
 		sidesClosed[0] = original[3];
+
+		original = sidesFullyOpen;
+		sidesFullyOpen[1] = original[0];
+		sidesFullyOpen[2] = original[1];
+		sidesFullyOpen[3] = original[2];
+		sidesFullyOpen[0] = original[3];
 	}
 
 	void rot180()
@@ -296,6 +312,7 @@ struct Shape
 		foreach (ref vertex; vertices)
 			vertex[0] = 1.0 - vertex[0];
 		swap(sidesClosed[0], sidesClosed[2]);
+		swap(sidesFullyOpen[0], sidesFullyOpen[2]);
 		reverseIndices = !reverseIndices;
 	}
 
@@ -304,6 +321,7 @@ struct Shape
 		foreach (ref vertex; vertices)
 			vertex[1] = 1.0 - vertex[1];
 		swap(sidesClosed[1], sidesClosed[3]);
+		swap(sidesFullyOpen[1], sidesFullyOpen[3]);
 		reverseIndices = !reverseIndices;
 	}
 }

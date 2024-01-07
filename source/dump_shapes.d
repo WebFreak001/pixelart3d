@@ -40,6 +40,15 @@ void dump_shapes()
 		if (shape.sidesClosed[Side.bottom])
 			f.writeln("M 0 1.8 H 1 V 2 H 0 Z");
 
+		if (shape.sidesFullyOpen[Side.left])
+			f.writeln("M -0.25 0.25 H -0.5 V 0.75 H -0.25 Z");
+		if (shape.sidesFullyOpen[Side.top])
+			f.writeln("M 0.25 -0.25 H 0.75 V -0.5 H 0.25 Z");
+		if (shape.sidesFullyOpen[Side.right])
+			f.writeln("M 1.25 0.25 H 1.5 V 0.75 H 1.25 Z");
+		if (shape.sidesFullyOpen[Side.bottom])
+			f.writeln("M 0.25 1.25 H 0.75 V 1.5 H 0.25 Z");
+
 		// CW/CCW doesn't matter for SVG
 		foreach (triIdx; shape.rawIndices.chunks(3))
 		{
