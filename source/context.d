@@ -265,12 +265,12 @@ struct Context
 
 	auto filenameLabel = Container!Label(Align.Start, Align.End, 32, -32, Label("ななひらさん大好き"));
 	auto sizeLabel = Container!(FormattedLabel!("%d x %d", int, int))(Align.End, Align.End, -32, -32);
-	auto toolbox = Container!Toolbox(Align.Start, Align.Middle, 32, 0);
+	auto shapebox = Container!Shapebox(Align.Start, Align.Middle, 32, 0);
 	auto palette = Container!Palette(Align.Middle, Align.End, 0, -32);
 	alias GUI = AliasSeq!(
 		filenameLabel,
 		sizeLabel,
-		toolbox,
+		shapebox,
 		palette
 	);
 
@@ -283,7 +283,7 @@ struct Context
 	this(NVGWindow window)
 	{
 		this.window = window;
-		toolbox.initialize();
+		shapebox.initialize();
 		loadImage();
 		palette.palette = image.palette;
 	}
@@ -381,7 +381,7 @@ struct Context
 			}
 			else
 			{
-				toolbox.rotate(d);
+				shapebox.rotate(d);
 				queueRedraw();
 			}
 		}
@@ -445,7 +445,7 @@ struct Context
 			}
 			else if (auto rot = e.among("Left", "Up", "Right", "Down"))
 			{
-				toolbox.rotation = rot % 4;
+				shapebox.rotation = rot % 4;
 				queueRedraw();
 			}
 		}
@@ -567,7 +567,7 @@ struct Context
 		if (x < 0 || y < 0 || x >= layer.width || y >= layer.height)
 			return false;
 
-		layer.data[y * layer.width + x].shape = cast(ubyte) toolbox.selectedShapeId;
+		layer.data[y * layer.width + x].shape = cast(ubyte) shapebox.selectedShapeId;
 		layer.data[y * layer.width + x].color = canvasErase ? 0 : cast(ubyte)(palette.selected + 1);
 
 		return true;
@@ -743,7 +743,7 @@ struct Palette
 	}
 }
 
-struct Toolbox
+struct Shapebox
 {
 	enum renderSize = 20;
 	enum gap = 4;
@@ -756,7 +756,7 @@ struct Toolbox
 	int[] shapeStartIndices;
 	int[] shapeCounts;
 	/// least common multiple of shape counts - used to clamp rotation
-	/// Most likely this is `4` since tools have at most 4 rotations and no 3-rot variants yet
+	/// Most likely this is `4` since shapes have at most 4 rotations and no 3-rot variants yet
 	int countsLcm;
 
 	void initialize()
