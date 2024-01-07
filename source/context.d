@@ -15,6 +15,8 @@ struct Pixel
 	ubyte backColor;
 	ubyte depth;
 	ubyte shape;
+
+	enum invalid = Pixel(ubyte.max, ubyte.max, ubyte.max, ubyte.max);
 }
 
 struct Layer
@@ -259,6 +261,7 @@ struct Context
 {
 	NVGWindow window;
 	Image image;
+	Layer workingOverride;
 	Guide[] guides;
 	float viewOffsetX = 0;
 	float viewOffsetY = 0;
@@ -540,13 +543,20 @@ struct Context
 		auto layer = image.layers[layerNo];
 		int lx = layer.x;
 		int ly = layer.y;
+		bool isActiveLayer = layerNo == activeLayer;
 
 		for (int y = 0; y < layer.height; y++)
 			for (int x = 0; x < layer.width; x++)
 			{
 				int tx = lx + x;
 				int ty = ly + y;
-				Pixel px = layer.data[y * layer.width + x];
+				size_t index = y * layer.width + x;
+				Pixel px = layer.data[index];
+
+				if (isActiveLayer
+					&& workingOverride.data.length == layer.data.length
+					&& workingOverride.data[index] !is Pixel.invalid)
+					px = workingOverride.data[index];
 
 				if (px.color == 0)
 					continue;
@@ -563,28 +573,65 @@ struct Context
 			}
 	}
 
+	bool canvasPainting;
+	bool acquireCanvasPaintLock()
+	{
+		if (canvasPainting)
+			return false;
+		canvasPainting = true;
+		return true;
+	}
+
 	int[2] canvasStart;
 	bool canvasErase;
+	Tool canvasTool;
 	bool canvasStartStroke(int mx, int my, bool erase)
 	{
+		if (!acquireCanvasPaintLock())
+			return false;
+
+		workingOverride.x = image.layers[activeLayer].x;
+		workingOverride.y = image.layers[activeLayer].y;
+		workingOverride.width = image.layers[activeLayer].width;
+		workingOverride.height = image.layers[activeLayer].height;
+		if (workingOverride.data.length != image.layers[activeLayer].data.length)
+		{
+			workingOverride.data.length = image.layers[activeLayer].data.length;
+			workingOverride.data[] = Pixel.invalid;
+		}
+
 		canvasErase = erase;
+		canvasTool = toolbox.toolSelector.selected;
 		canvasStart = mouseToImagePixels(mx, my);
 		return canvasDrawTo(mx, my);
 	}
 
 	bool putCurrentPixel(int x, int y)
 	{
-		auto layer = &image.layers[activeLayer];
-
-		x -= layer.x;
-		y -= layer.y;
-
-		if (x < 0 || y < 0 || x >= layer.width || y >= layer.height)
+		if (workingOverride.data.length != image.layers[activeLayer].data.length)
 			return false;
 
-		layer.data[y * layer.width + x].shape = cast(ubyte) shapebox
-			.selectedShapeId;
-		layer.data[y * layer.width + x].color = canvasErase ? 0 : cast(ubyte)(
+		x -= workingOverride.x;
+		y -= workingOverride.y;
+
+		if (x < 0 || y < 0 || x >= workingOverride.width || y >= workingOverride.height)
+			return false;
+
+		size_t index = y * workingOverride.width + x;
+
+		if (canvasTool == Tool.paint)
+		{
+			if (image.layers[activeLayer].data[index].color == 0)
+				return false;
+			workingOverride.data[index].shape =
+				image.layers[activeLayer].data[index].shape;
+		}
+		else
+		{
+			workingOverride.data[index].shape = cast(ubyte) shapebox
+				.selectedShapeId;
+		}
+		workingOverride.data[index].color = canvasErase ? 0 : cast(ubyte)(
 			toolbox.palette.selected + 1);
 
 		return true;
@@ -629,16 +676,39 @@ struct Context
 
 	bool canvasDrawTo(int mx, int my)
 	{
+		if (!canvasPainting)
+			return false;
+
 		auto end = mouseToImagePixels(mx, my);
-		scope (exit)
+
+		switch (canvasTool)
+		{
+		case Tool.draw:
+		case Tool.paint:
+			auto ret = drawLine(canvasStart[0], canvasStart[1], end[0], end[1]);
 			canvasStart = end;
-		return drawLine(canvasStart[0], canvasStart[1], end[0], end[1]);
+			return ret;
+		case Tool.line:
+			workingOverride.data[] = Pixel.invalid;
+			return drawLine(canvasStart[0], canvasStart[1], end[0], end[1]);
+		default:
+			return false;
+		}
 	}
 
 	bool canvasFinishStroke(int mx, int my)
 	{
-		return canvasDrawTo(mx, my);
+		canvasPainting = false;
+		bool any = canvasDrawTo(mx, my);
 		// TODO: undo stack
+		foreach (i, px; workingOverride.data)
+			if (px !is Pixel.invalid)
+			{
+				image.layers[activeLayer].data[i] = px;
+				any = true;
+			}
+		workingOverride.data[] = Pixel.invalid;
+		return any;
 	}
 
 	int[2] mouseToImagePixels(int mx, int my)
