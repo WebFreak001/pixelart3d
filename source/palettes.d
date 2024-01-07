@@ -42,7 +42,7 @@ shared static this()
 
 	foreach (ref p; palettes)
 		foreach (ref v; p)
-			v |= 0x000000FF;
+			v = (v << 8) | 0x000000FF;
 
 	version (LittleEndian)
 	{
@@ -51,4 +51,8 @@ shared static this()
 			foreach (ref v; p)
 				v = swapEndian(v);
 	}
+
+	import std.stdio;
+	foreach (name, palette; palettes)
+		writefln("%s: %(#%06x %)", name, palette);
 }

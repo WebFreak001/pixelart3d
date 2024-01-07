@@ -3,7 +3,11 @@ module context;
 import arsd.nanovega;
 import arsd.simpledisplay;
 import shapes;
+import std.algorithm;
+import std.file;
 import std.math;
+import std.meta : AliasSeq;
+import std.stdio;
 
 struct Pixel
 {
@@ -49,6 +53,7 @@ struct Container(T)
 	int offsetX, offsetY;
 	T inner;
 	int computedX, computedY;
+	bool canFocus = __traits(hasMember, T, "handleClick");
 
 	alias inner this;
 
@@ -72,6 +77,7 @@ struct Container(T)
 
 	void draw(NVGWindow window, NVGContext ctx)
 	{
+		ctx.resetTransform();
 		layout(window, ctx);
 		ctx.translate(computedX, computedY);
 		inner.draw(ctx);
@@ -83,11 +89,13 @@ struct Container(T)
 			&& my >= computedY && my <= computedY + inner.height;
 	}
 
-	static if (__traits(hasMember, T, "handleClick"))
-		bool handleClick(int x, int y)
-		{
+	bool handleClick(int x, int y)
+	{
+		static if (__traits(hasMember, T, "handleClick"))
 			return inner.handleClick(x - computedX, y - computedY);
-		}
+		else
+			return false;
+	}
 }
 
 struct Image
@@ -100,19 +108,148 @@ struct Image
 	void loadSample()
 	{
 		import palettes;
+		palette = palettes.palettes["PixelArt 32"];
 
-		layers.length++;
+		layers.length = 1;
 		width = 16;
 		height = 16;
-		palette = palettes.palettes["PixelArt 32"];
-		layers[0].width = layers[0].height = 16;
+		layers[0].width = 16;
+		layers[0].height = 16;
 		layers[0].data.length = 16 * 16;
-		layers[0].data[1 + 1 * 16] = Pixel(5, 5, 2, 0);
-		layers[0].data[2 + 1 * 16] = Pixel(4, 4, 2, 0);
-		layers[0].data[3 + 1 * 16] = Pixel(3, 3, 2, 0);
-		layers[0].data[1 + 2 * 16] = Pixel(5, 5, 2, 1);
-		layers[0].data[1 + 3 * 16] = Pixel(5, 5, 2, 5);
-		layers[0].data[1 + 4 * 16] = Pixel(5, 5, 2, 10);
+		layers[0].data[1 + 7 * 16] = Pixel(7, 0, 2, 3);
+		layers[0].data[2 + 7 * 16] = Pixel(7, 0, 2, 4);
+		layers[0].data[4 + 7 * 16] = Pixel(7, 0, 2, 3);
+		layers[0].data[5 + 7 * 16] = Pixel(7, 0, 2, 4);
+		layers[0].data[7 + 7 * 16] = Pixel(7, 0, 2, 3);
+		layers[0].data[8 + 7 * 16] = Pixel(7, 0, 2, 4);
+		layers[0].data[10 + 7 * 16] = Pixel(7, 0, 2, 3);
+		layers[0].data[11 + 7 * 16] = Pixel(7, 0, 2, 4);
+		layers[0].data[13 + 7 * 16] = Pixel(7, 0, 2, 3);
+		layers[0].data[14 + 7 * 16] = Pixel(7, 0, 2, 4);
+		layers[0].data[1 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[2 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[4 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[5 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[7 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[8 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[10 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[11 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[13 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[14 + 8 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[0 + 9 * 16] = Pixel(5, 0, 1, 50);
+		layers[0].data[1 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[2 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[3 + 9 * 16] = Pixel(5, 0, 1, 0);
+		layers[0].data[4 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[5 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[6 + 9 * 16] = Pixel(5, 0, 1, 0);
+		layers[0].data[7 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[8 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[9 + 9 * 16] = Pixel(5, 0, 1, 0);
+		layers[0].data[10 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[11 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[12 + 9 * 16] = Pixel(5, 0, 1, 0);
+		layers[0].data[13 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[14 + 9 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[15 + 9 * 16] = Pixel(5, 0, 1, 52);
+		layers[0].data[1 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[2 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[4 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[5 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[7 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[8 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[10 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[11 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[13 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[14 + 10 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[0 + 11 * 16] = Pixel(5, 0, 1, 50);
+		layers[0].data[1 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[2 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[3 + 11 * 16] = Pixel(5, 0, 1, 0);
+		layers[0].data[4 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[5 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[6 + 11 * 16] = Pixel(5, 0, 1, 0);
+		layers[0].data[7 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[8 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[9 + 11 * 16] = Pixel(5, 0, 1, 0);
+		layers[0].data[10 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[11 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[12 + 11 * 16] = Pixel(5, 0, 1, 0);
+		layers[0].data[13 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[14 + 11 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[15 + 11 * 16] = Pixel(5, 0, 1, 52);
+		layers[0].data[1 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[2 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[4 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[5 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[7 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[8 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[10 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[11 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[13 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[14 + 12 * 16] = Pixel(7, 0, 2, 0);
+		layers[0].data[1 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[2 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[4 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[5 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[7 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[8 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[10 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[11 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[13 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[14 + 13 * 16] = Pixel(5, 0, 2, 0);
+		layers[0].data[0 + 14 * 16] = Pixel(23, 0, 4, 7);
+		layers[0].data[1 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[2 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[3 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[4 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[5 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[6 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[7 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[8 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[9 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[10 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[11 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[12 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[13 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[14 + 14 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[15 + 14 * 16] = Pixel(23, 0, 4, 8);
+		layers[0].data[0 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[1 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[2 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[3 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[4 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[5 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[6 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[7 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[8 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[9 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[10 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[11 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[12 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[13 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[14 + 15 * 16] = Pixel(23, 0, 4, 0);
+		layers[0].data[15 + 15 * 16] = Pixel(23, 0, 4, 0);
+	}
+
+	void saveDebug()
+	{
+		writefln!"layers.length = %s;"(layers.length);
+		writefln!"width = %s;"(width);
+		writefln!"height = %s;"(height);
+		foreach (layerNo, layer; layers)
+		{
+			writefln!"layers[%s].width = %s;"(layerNo, width);
+			writefln!"layers[%s].height = %s;"(layerNo, height);
+			writefln!"layers[%s].data.length = %s * %s;"(layerNo, width, height);
+			foreach (i, px; layer.data)
+			{
+				if (px.color != 0)
+				{
+					writefln!"layers[%s].data[%s + %s * %s] = %s;"(layerNo, i % layer.width, i / layer.width, layer.width, px);
+				}
+			}
+		}
 	}
 }
 
@@ -124,10 +261,18 @@ struct Context
 	float viewOffsetX = 0;
 	float viewOffsetY = 0;
 	float zoom = 5.0f;
+	int activeLayer = 0;
 
-	Container!Label filenameLabel = Container!Label(Align.Start, Align.End, 32, -32);
-	Container!Label sizeLabel = Container!Label(Align.End, Align.End, -32, -32);
-	Container!Toolbox toolbox = Container!Toolbox(Align.Start, Align.Middle, 32, 0);
+	auto filenameLabel = Container!Label(Align.Start, Align.End, 32, -32, Label("ななひらさん大好き"));
+	auto sizeLabel = Container!(FormattedLabel!("%d x %d", int, int))(Align.End, Align.End, -32, -32);
+	auto toolbox = Container!Toolbox(Align.Start, Align.Middle, 32, 0);
+	auto palette = Container!Palette(Align.Middle, Align.End, 0, -32);
+	alias GUI = AliasSeq!(
+		filenameLabel,
+		sizeLabel,
+		toolbox,
+		palette
+	);
 
 	bool nanovegaInitialized;
 	NVGPaint transparentPaint;
@@ -140,6 +285,7 @@ struct Context
 		this.window = window;
 		toolbox.initialize();
 		loadImage();
+		palette.palette = image.palette;
 	}
 
 	void initNanovega(NVGContext ctx)
@@ -157,6 +303,26 @@ struct Context
 		NVGImage transparentImage = ctx.createImageRGBA(2, 2, transparentColors[], NVGImageFlag.NoFiltering | NVGImageFlag
 				.RepeatX | NVGImageFlag.RepeatY);
 		transparentPaint = ctx.imagePattern(0, 0, 2, 2, 0, transparentImage);
+
+		auto font = ctx.createFont("JetBrains Mono", "fonts/JetBrainsMono/JetBrainsMono-Bold.ttf");
+		if (font == -1)
+			assert(false, "Failed to load font");
+
+		foreach (fallbackPath; [
+			"fonts/NotoSans-Japanese/NotoSansJP-Bold.ttf",
+		])
+		{
+			auto fallback = ctx.createFont("fallback", fallbackPath);
+			if (fallback == -1)
+			{
+				stderr.writeln("Failed to load font ", fallbackPath);
+				continue;
+			}
+			ctx.addFallbackFont(font, fallback);
+			stderr.writeln("loaded fallback font ", fallbackPath);
+		}
+
+		ctx.fontFaceId = font;
 	}
 
 	void loadImage()
@@ -176,6 +342,7 @@ struct Context
 		bool qualifiesClick;
 	}
 	MouseState[16] mouseButtonStates;
+	int focusControl = -1;
 	void handleMouseEvent(MouseEvent e)
 	{
 		if (e.type == MouseEventType.motion)
@@ -191,6 +358,11 @@ struct Context
 					viewOffsetX += e.dx;
 					viewOffsetY += e.dy;
 					queueRedraw();
+				}
+				else if (state.dragging && focusControl == -1 && (btn == MouseButtonLinear.left || btn == MouseButtonLinear.right))
+				{
+					if (canvasDrawTo(e.x, e.y))
+						queueRedraw();
 				}
 			}
 		}
@@ -220,15 +392,56 @@ struct Context
 			mouseButtonStates[e.buttonLinear].dragStartY = e.y;
 			mouseButtonStates[e.buttonLinear].qualifiesClick = true;
 			mouseButtonStates[e.buttonLinear].dragModifierState = e.modifierState;
-			return;
+
+			if (e.button == MouseButton.left || e.button == MouseButton.right)
+			{
+				focusControl = -1;
+				static foreach (i, control; GUI)
+					if (control.pointerWithin(e.x, e.y) && control.canFocus)
+					{
+						focusControl = i;
+						return;
+					}
+
+				assert(focusControl == -1, "logic bug! should have returned above");
+
+				if (canvasStartStroke(e.x, e.y, e.button == MouseButton.right))
+					queueRedraw();
+			}
 		}
 		else if (e.type == MouseEventType.buttonReleased)
 		{
 			mouseButtonStates[e.buttonLinear].dragging = false;
+
+			if ((e.button == MouseButton.left || e.button == MouseButton.right) && focusControl == -1)
+				if (canvasFinishStroke(e.x, e.y))
+					queueRedraw();
+
 			if (e.button == MouseButton.left && mouseButtonStates[e.buttonLinear].qualifiesClick)
 			{
-				if (toolbox.pointerWithin(e.x, e.y) && toolbox.handleClick(e.x, e.y))
-					queueRedraw();
+				static foreach (control; GUI)
+					if (control.pointerWithin(e.x, e.y) && control.handleClick(e.x, e.y))
+					{
+						queueRedraw();
+						return;
+					}
+			}
+		}
+	}
+
+	void handleKeyEvent(KeyEvent e)
+	{
+		if (e.pressed) {
+			if (e == "Ctrl-S")
+			{
+				image.saveDebug();
+			}
+			else if (e == "Home")
+			{
+				viewOffsetX = 0;
+				viewOffsetY = 0;
+				zoom = 5.0f;
+				queueRedraw();
 			}
 		}
 	}
@@ -297,11 +510,9 @@ struct Context
 
 	void renderInterface(NVGContext ctx)
 	{
-		ctx.resetTransform();
-
-		filenameLabel.draw(window, ctx);
-		sizeLabel.draw(window, ctx);
-		toolbox.draw(window, ctx);
+		sizeLabel.reformatIfNeeded(image.width, image.height);
+		static foreach (control; GUI)
+			control.draw(window, ctx);
 	}
 
 	void renderLayer(size_t layerNo, NVGContext ctx)
@@ -331,6 +542,200 @@ struct Context
 				ctx.currTransform = m;
 			}
 	}
+
+	int[2] canvasStart;
+	bool canvasErase;
+	bool canvasStartStroke(int mx, int my, bool erase)
+	{
+		canvasErase = erase;
+		canvasStart = mouseToImagePixels(mx, my);
+		return canvasDrawTo(mx, my);
+	}
+
+	bool putCurrentPixel(int x, int y)
+	{
+		auto layer = &image.layers[activeLayer];
+
+		x -= layer.x;
+		y -= layer.y;
+
+		if (x < 0 || y < 0 || x >= layer.width || y >= layer.height)
+			return false;
+
+		layer.data[y * layer.width + x].shape = cast(ubyte) toolbox.selectedShapeId;
+		layer.data[y * layer.width + x].color = canvasErase ? 0 : cast(ubyte)(palette.selected + 1);
+
+		return true;
+	}
+
+	bool drawLine(int x0, int y0, int x1, int y1)
+	{
+		// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+		int dx = abs(x1 - x0);
+		int sx = x0 < x1 ? 1 : -1;
+		int dy = -abs(y1 - y0);
+		int sy = y0 < y1 ? 1 : -1;
+		int error = dx + dy;
+		bool updated;
+
+		while (true)
+		{
+			if (putCurrentPixel(x0, y0))
+				updated = true;
+
+			if (x0 == x1 && y0 == y1)
+				break;
+			int e2 = 2 * error;
+			if (e2 >= dy)
+			{
+				if (x0 == x1)
+					break;
+				error += dy;
+				x0 += sx;
+			}
+			if (e2 <= dx)
+			{
+				if (y0 == y1)
+					break;
+				error += dx;
+				y0 += sy;
+			}
+		}
+
+		return updated;
+	}
+
+	bool canvasDrawTo(int mx, int my)
+	{
+		auto end = mouseToImagePixels(mx, my);
+		scope (exit) canvasStart = end;
+		return drawLine(canvasStart[0], canvasStart[1], end[0], end[1]);
+	}
+
+	bool canvasFinishStroke(int mx, int my)
+	{
+		return canvasDrawTo(mx, my);
+		// TODO: undo stack
+	}
+
+	int[2] mouseToImagePixels(int mx, int my)
+	{
+		float x = mx;
+		float y = my;
+		x -= window.width * 0.5f + viewOffsetX;
+		y -= window.height * 0.5f + viewOffsetY;
+		double scale = pow(2.0, zoom);
+		x /= scale;
+		y /= scale;
+		x -= -image.width / 2.0f;
+		y -= -image.height / 2.0f;
+		return [
+			cast(int) floor(x),
+			cast(int) floor(y),
+		];
+	}
+}
+struct Palette
+{
+	enum renderSize = 20;
+	enum gap = 2;
+
+	int rows = 2;
+	int width, height;
+
+	uint[] palette;
+	int selected;
+
+	void rotate(int amount)
+	{
+		selected += amount;
+		while (selected >= palette.length)
+			selected -= palette.length;
+		while (selected < 0)
+			selected += palette.length;
+	}
+
+	bool handleClick(int x, int y)
+	{
+		int gx = (x + gap / 2) / (renderSize + gap);
+		int gy = (y + gap / 2) / (renderSize + gap);
+		if (gy < 0)
+			gy = 0;
+		if (gy >= rows)
+			gy = rows - 1;
+
+		int i = gx * rows + gy;
+		if (i < 0 || i >= palette.length || selected == i)
+			return false;
+
+		selected = i;
+		return true;
+	}
+
+	void layout(NVGWindow window, NVGContext ctx)
+	{
+		int columns = cast(int)(palette.length + rows - 1) / rows;
+		height = rows * renderSize + gap * (rows - 1);
+		width = columns * renderSize + gap * (columns - 1);
+	}
+
+	void draw(NVGContext ctx)
+	{
+		int x = 0;
+		int y = -1;
+		auto t = ctx.currTransform;
+		ctx.beginPath();
+		ctx.roundedRect(-4, -4, width + 8, height + 8, 4);
+		ctx.fillColor = NVGColor(0, 0, 0, 0.3);
+		ctx.fill();
+		int[2] selectedPos;
+
+		foreach (i; 0 .. cast(int) palette.length)
+		{
+			y++;
+			if (y == rows)
+			{
+				y = 0;
+				x++;
+			}
+			ctx.currTransform = t;
+			ctx.translate(
+				x * (renderSize + gap),
+				y * (renderSize + gap)
+			);
+			ctx.scale(renderSize, renderSize);
+
+			if (selected == i)
+				selectedPos = [x, y];
+
+			ctx.scissor(0, 0, 1, 1);
+			ctx.beginPath();
+			ctx.roundedRect(0, 0, 1, 1, 0.2);
+			ctx.fillColor = NVGColor(palette[i]);
+			ctx.fill();
+			ctx.resetScissor();
+		}
+
+		{
+			ctx.currTransform = t;
+			ctx.translate(
+				selectedPos[0] * (renderSize + gap),
+				selectedPos[1] * (renderSize + gap)
+			);
+			ctx.scale(renderSize, renderSize);
+
+			ctx.beginPath();
+			ctx.roundedRect(-0.1, -0.1, 1.2, 1.2, 0.3);
+			ctx.strokeWidth = 0.1;
+			ctx.strokeColor = NVGColor.white;
+			ctx.stroke();
+		}
+	}
+
+	uint activeColor() const
+	{
+		return palette[selected];
+	}
 }
 
 struct Toolbox
@@ -341,7 +746,7 @@ struct Toolbox
 	int columns = 2;
 	int width, height;
 	int rotation;
-	int selectedIndex;
+	int selectedGroup;
 
 	int[] shapeStartIndices;
 	int[] shapeCounts;
@@ -372,9 +777,9 @@ struct Toolbox
 	void rotate(int amount)
 	{
 		rotation += amount;
-		if (rotation >= countsLcm)
+		while (rotation >= countsLcm)
 			rotation -= countsLcm;
-		if (rotation < 0)
+		while (rotation < 0)
 			rotation += countsLcm;
 	}
 
@@ -388,10 +793,10 @@ struct Toolbox
 			gx = columns - 1;
 
 		int i = gy * columns + gx;
-		if (i < 0 || i >= shapeStartIndices.length || selectedIndex == i)
+		if (i < 0 || i >= shapeStartIndices.length || selectedGroup == i)
 			return false;
 
-		selectedIndex = i;
+		selectedGroup = i;
 		return true;
 	}
 
@@ -426,7 +831,7 @@ struct Toolbox
 			);
 			ctx.scale(renderSize, renderSize);
 
-			if (selectedIndex == i)
+			if (selectedGroup == i)
 			{
 				ctx.beginPath();
 				ctx.roundedRect(-0.1, -0.1, 1.2, 1.2, 0.1);
@@ -444,19 +849,41 @@ struct Toolbox
 		}
 	}
 
-	size_t getShapeIndex(int idx) const
+	size_t getActiveShapeId(int group) const
 	{
-		return shapeStartIndices[idx] + rotation % shapeCounts[idx];
+		return shapeStartIndices[group] + rotation % shapeCounts[group];
 	}
 
-	const(Shape) getShape(int idx) const
+	const(Shape) getShape(int group) const
 	{
-		return allShapes[getShapeIndex(idx)];
+		return allShapes[getActiveShapeId(group)];
 	}
 
 	const(Shape) selectedShape() const
 	{
-		return getShape(selectedIndex);
+		return getShape(selectedGroup);
+	}
+
+	size_t selectedShapeId() const
+	{
+		return getActiveShapeId(selectedGroup);
+	}
+}
+
+struct FormattedLabel(string formatString, Args...)
+{
+	import std.format;
+
+	Label label;
+	alias label this;
+	Args lastArgs;
+
+	void reformatIfNeeded(Args args)
+	{
+		if (lastArgs == args)
+			return;
+		lastArgs = args;
+		label.text = format!formatString(args);
 	}
 }
 
@@ -464,10 +891,12 @@ struct Label
 {
 	string text;
 	int width, height;
+	float fontSize = 20.0;
 
 	void layout(NVGWindow window, NVGContext ctx)
 	{
 		float[4] b = 0;
+		ctx.fontSize = 20;
 		ctx.textBounds(0, 0, text, b);
 		width = cast(int) ceil(b[2]);
 		height = cast(int) ceil(b[3]);
@@ -475,7 +904,9 @@ struct Label
 
 	void draw(NVGContext ctx)
 	{
-		ctx.text(0, 0, text);
+		ctx.fontSize = 20;
+		ctx.fillColor = NVGColor.white;
+		ctx.text(0, height, text);
 	}
 }
 

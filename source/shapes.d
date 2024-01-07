@@ -28,7 +28,7 @@ struct Shape
 	bool reverseIndices;
 
 	/// Implicitly starts at 0 0 and closes the path.
-	static Shape fromSVG(return string name, scope const(char)[] path)
+	static Shape fromSVG(return string name, scope const(char)[] path, bool hack)
 	{
 		import svg_arc;
 
@@ -161,8 +161,8 @@ struct Shape
 				{
 					// TODO: Large-circle minor has incorrect angles and becomes just a straight line!
 					auto angle = lerp(angles[0], angles[1], i / cast(double)arc_resolution
-						// horrible hack... idk why but this works
-						* (flagS ? 1.0 : 0.25));
+						// horrible hack... need to fix the math soon!
+						* (hack ? 0.25 : 1.0));
 					auto p = ellipticArcPoint(center, radii, xAngle, angle);
 					addPoint(p[0], p[1]);
 				}
@@ -184,7 +184,7 @@ struct Shape
 		{
 			assert(vertex[0] >= 0 && vertex[0] <= 1
 				&& vertex[1] >= 0 && vertex[1] <= 1,
-				"vertex #" ~ i.to!string ~ " (" ~ vertex.to!string ~ ") out of bounds!");
+				name ~ " vertex #" ~ i.to!string ~ " (" ~ vertex.to!string ~ ") out of bounds!");
 		}
 
 		ret.recomputeSidesClosed();
@@ -323,9 +323,9 @@ const(Shape[]) allShapes() {
 
 		Filled: H 1 V 1 H 0
 		Triangle[rot]: H 1 L 0 1
-		Quarter Circle[rot]: L 1 0 A 1 1 0 0 1 0 1
-		Inverted Quarter Circle[rot]: L 1 0 A 1 1 0 0 0 0 1
-		Three-Quarter Inverted Quarter Circle[rot]: L 1 0 V 0.5 A 0.5 0.5 0 0 0 0.5 1 H 0
+		Quarter Circle[rot]: H 1 A 1 1 0 0 1 0 1
+		Inverted Quarter Circle[rot][hack]: H 1 A 1 1 0 0 0 0 1
+		Three-Quarter Inverted Quarter Circle[rot][hack]: H 1 V 0.5 A 0.5 0.5 0 0 0 0.5 1 H 0
 		Three-Quarter Cutoff[rot]: H 1 V 0.5 L 0.5 1 H 0
 		Three-Quarter Block[rot]: H 1 V 0.5 H 0.5 V 1 H 0
 		Half Block[rot]: H 1 V 0.5 H 0
@@ -337,12 +337,15 @@ const(Shape[]) allShapes() {
 		Half Dome Offset[rot]: H 1 V 0.5 A 0.5 0.5 0 0 1 0 0.5
 		Notched[rot]: H 0.5 L 0 0.5 Z M 0.5 0 H 1 V 0.5
 		Notched Offset[rot]: H 1 V 1 L 0.5 0.5 L 0 1
+		Round Notched[rot]: H 1 V 0.5 A 0.5 0.5 0 0 0 0 0.5
+		Round Notched Offset[rot]: H 1 V 1 A 0.5 0.5 0 0 0 0 1
 		Wide-slope major[fliprot]: H 1 V 0.5 L 0 1
 		Wide-slope minor[fliprot]: H 1 L 0 0.5
 		Large-circle major[fliprot]: H 1 A 2 2 0 0 1 SQRT3-1 1 H 0
 		Large-circle minor[rot]: H SQRT3-1 A 2 2 0 0 1 0 SQRT3-1
 		Small Triangle[rot]: H 0.5 L 0 0.5
 		Small Quad[rot]: H 0.5 V 0.5 H 0
+		Small Quarter Circle[rot]: H 0.5 A 0.5 0.5 0 0 1 0 0.5
 	`);
 }
 
@@ -373,6 +376,9 @@ Shape[] generateShapes(string shapes)
 			continue;
 		auto parts = line.findSplit(":");
 		auto name = parts[0];
+		bool hack = name.endsWith("[hack]");
+		if (hack)
+			name = name[0 .. $ - "[hack]".length];
 		bool rot = name.endsWith("[rot]");
 		if (rot)
 			name = name[0 .. $ - "[rot]".length];
@@ -385,7 +391,7 @@ Shape[] generateShapes(string shapes)
 		assert(name.length, "shape must have a name!");
 		assert(parts[2].length, "shape must have SVG data!");
 
-		auto shape = Shape.fromSVG(name, parts[2].strip);
+		auto shape = Shape.fromSVG(name, parts[2].strip, hack);
 		addShapes(shape, rot);
 		if (fliprot)
 		{
