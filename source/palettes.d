@@ -51,8 +51,4 @@ shared static this()
 			foreach (ref v; p)
 				v = swapEndian(v);
 	}
-
-	import std.stdio;
-	foreach (name, palette; palettes)
-		writefln("%s: %(#%06x %)", name, palette);
 }
