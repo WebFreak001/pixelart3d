@@ -443,6 +443,11 @@ struct Context
 				zoom = 5.0f;
 				queueRedraw();
 			}
+			else if (auto rot = e.among("Left", "Up", "Right", "Down"))
+			{
+				toolbox.rotation = rot % 4;
+				queueRedraw();
+			}
 		}
 	}
 
