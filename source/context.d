@@ -108,6 +108,7 @@ struct Image
 	void loadSample()
 	{
 		import palettes;
+
 		palette = palettes.palettes["PixelArt 32"];
 
 		layers.length = 1;
@@ -246,7 +247,8 @@ struct Image
 			{
 				if (px.color != 0)
 				{
-					writefln!"layers[%s].data[%s + %s * %s] = %s;"(layerNo, i % layer.width, i / layer.width, layer.width, px);
+					writefln!"layers[%s].data[%s + %s * %s] = %s;"(layerNo, i % layer
+							.width, i / layer.width, layer.width, px);
 				}
 			}
 		}
@@ -263,8 +265,10 @@ struct Context
 	float zoom = 5.0f;
 	int activeLayer = 0;
 
-	auto filenameLabel = Container!Label(Align.Start, Align.End, 32, -32, Label("ななひらさん大好き"));
-	auto sizeLabel = Container!(FormattedLabel!("%d x %d", int, int))(Align.End, Align.End, -32, -32);
+	auto filenameLabel = Container!Label(Align.Start, Align.End, 32, -32, Label(
+			"ななひらさん大好き"));
+	auto sizeLabel = Container!(FormattedLabel!("%d x %d", int, int))(
+		Align.End, Align.End, -32, -32);
 	auto shapebox = Container!Shapebox(Align.Start, Align.Middle, 32, 0);
 	auto palette = Container!Palette(Align.Middle, Align.End, 0, -32);
 	alias GUI = AliasSeq!(
@@ -341,6 +345,7 @@ struct Context
 		int dragModifierState;
 		bool qualifiesClick;
 	}
+
 	MouseState[16] mouseButtonStates;
 	int focusControl = -1;
 	void handleMouseEvent(MouseEvent e)
@@ -349,24 +354,29 @@ struct Context
 		{
 			foreach (btn, ref state; mouseButtonStates)
 			{
-				if (state.qualifiesClick && abs(e.x - state.dragStartX) + abs(e.y - state.dragStartY) > 8)
+				if (state.qualifiesClick && abs(e.x - state.dragStartX) + abs(
+						e.y - state.dragStartY) > 8)
 					state.qualifiesClick = false;
 				else if (state.dragging && (btn == MouseButtonLinear.middle
 					|| ((state.dragModifierState & ModifierState.alt) != 0
-						&& (btn == MouseButtonLinear.left || btn == MouseButtonLinear.right))))
+						&& (btn == MouseButtonLinear.left || btn == MouseButtonLinear
+						.right))))
 				{
 					viewOffsetX += e.dx;
 					viewOffsetY += e.dy;
 					queueRedraw();
 				}
-				else if (state.dragging && focusControl == -1 && (btn == MouseButtonLinear.left || btn == MouseButtonLinear.right))
+				else if (state.dragging && focusControl == -1 && (btn == MouseButtonLinear.left || btn == MouseButtonLinear
+						.right))
 				{
 					if (canvasDrawTo(e.x, e.y))
 						queueRedraw();
 				}
 			}
 		}
-		else if (e.type == MouseEventType.buttonPressed && (e.button == MouseButton.wheelDown || e.button == MouseButton.wheelUp))
+		else if (e.type == MouseEventType.buttonPressed && (
+				e.button == MouseButton.wheelDown || e.button == MouseButton
+				.wheelUp))
 		{
 			int d = e.button == MouseButton.wheelDown ? 1 : -1;
 			if ((e.modifierState & ModifierState.ctrl) != 0)
@@ -417,10 +427,12 @@ struct Context
 				if (canvasFinishStroke(e.x, e.y))
 					queueRedraw();
 
-			if (e.button == MouseButton.left && mouseButtonStates[e.buttonLinear].qualifiesClick)
+			if (e.button == MouseButton.left && mouseButtonStates[e.buttonLinear]
+				.qualifiesClick)
 			{
 				static foreach (control; GUI)
-					if (control.pointerWithin(e.x, e.y) && control.handleClick(e.x, e.y))
+					if (control.pointerWithin(e.x, e.y) && control.handleClick(e
+							.x, e.y))
 					{
 						queueRedraw();
 						return;
@@ -431,7 +443,8 @@ struct Context
 
 	void handleKeyEvent(KeyEvent e)
 	{
-		if (e.pressed) {
+		if (e.pressed)
+		{
 			if (e == "Ctrl-S")
 			{
 				image.saveDebug();
@@ -567,8 +580,10 @@ struct Context
 		if (x < 0 || y < 0 || x >= layer.width || y >= layer.height)
 			return false;
 
-		layer.data[y * layer.width + x].shape = cast(ubyte) shapebox.selectedShapeId;
-		layer.data[y * layer.width + x].color = canvasErase ? 0 : cast(ubyte)(palette.selected + 1);
+		layer.data[y * layer.width + x].shape = cast(ubyte) shapebox
+			.selectedShapeId;
+		layer.data[y * layer.width + x].color = canvasErase ? 0 : cast(ubyte)(
+			toolbox.palette.selected + 1);
 
 		return true;
 	}
@@ -613,7 +628,8 @@ struct Context
 	bool canvasDrawTo(int mx, int my)
 	{
 		auto end = mouseToImagePixels(mx, my);
-		scope (exit) canvasStart = end;
+		scope (exit)
+			canvasStart = end;
 		return drawLine(canvasStart[0], canvasStart[1], end[0], end[1]);
 	}
 
