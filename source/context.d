@@ -270,12 +270,12 @@ struct Context
 	auto sizeLabel = Container!(FormattedLabel!("%d x %d", int, int))(
 		Align.End, Align.End, -32, -32);
 	auto shapebox = Container!Shapebox(Align.Start, Align.Middle, 32, 0);
-	auto palette = Container!Palette(Align.Middle, Align.End, 0, -32);
+	auto toolbox = Container!Toolbox(Align.Middle, Align.End, 0, -32);
 	alias GUI = AliasSeq!(
 		filenameLabel,
 		sizeLabel,
 		shapebox,
-		palette
+		toolbox
 	);
 
 	bool nanovegaInitialized;
@@ -289,7 +289,7 @@ struct Context
 		this.window = window;
 		shapebox.initialize();
 		loadImage();
-		palette.palette = image.palette;
+		toolbox.palette.palette = image.palette;
 	}
 
 	void initNanovega(NVGContext ctx)
@@ -358,7 +358,7 @@ struct Context
 						e.y - state.dragStartY) > 8)
 					state.qualifiesClick = false;
 				else if (state.dragging && (btn == MouseButtonLinear.middle
-					|| ((state.dragModifierState & ModifierState.alt) != 0
+						|| ((state.dragModifierState & ModifierState.alt) != 0
 						&& (btn == MouseButtonLinear.left || btn == MouseButtonLinear
 						.right))))
 				{
@@ -408,7 +408,7 @@ struct Context
 				focusControl = -1;
 				static foreach (i, control; GUI)
 					if (control.pointerWithin(e.x, e.y) && control.canFocus)
-					{
+						{
 						focusControl = i;
 						return;
 					}
@@ -433,7 +433,7 @@ struct Context
 				static foreach (control; GUI)
 					if (control.pointerWithin(e.x, e.y) && control.handleClick(e
 							.x, e.y))
-					{
+						{
 						queueRedraw();
 						return;
 					}
@@ -488,13 +488,15 @@ struct Context
 		ctx.scale(scale, scale);
 		ctx.translate(-image.width / 2.0f, -image.height / 2.0f);
 
+		ctx.drawShadow(image.x, image.y + 0.2f, image.width, image.height, 0.2f, 3.0f, NVGColor(0, 0, 0, 0.5f));
+
 		ctx.beginPath();
 		ctx.roundedRect(image.x, image.y, image.width, image.height, 0.2f);
+		ctx.strokeColor = NVGColor.white;
+		ctx.strokeWidth = 0.2f;
+		ctx.stroke();
 		ctx.fillPaint = transparentPaint;
 		ctx.fill();
-		ctx.strokeColor = NVGColor.white;
-		ctx.strokeWidth = 0.1f;
-		ctx.stroke();
 
 		const px = 1.0f / scale;
 
@@ -656,6 +658,194 @@ struct Context
 		];
 	}
 }
+
+mixin template StackContainer(bool horizontal, bool backdrop, int gap, Align alignItems, Items...)
+{
+	enum lengthProp = horizontal ? "width" : "height";
+	enum orthoProp = horizontal ? "height" : "width";
+	enum axis = horizontal ? "x" : "y";
+	enum orthoAxis = horizontal ? "y" : "x";
+
+	int sumSize(string prop)() const @property
+	{
+		int ret;
+		static foreach (i, Item; Items)
+		{
+			static if (i != 0)
+				ret += gap;
+			ret += __traits(getMember, Item, prop);
+		}
+		return ret;
+	}
+
+	int maxSize(string prop)() const @property
+	{
+		int ret;
+		static foreach (i, Item; Items)
+			if (__traits(getMember, Item, prop) > ret)
+				ret = __traits(getMember, Item, prop);
+		return ret;
+	}
+
+	static if (horizontal)
+	{
+		alias width = sumSize!"width";
+		alias height = maxSize!"height";
+	}
+	else
+	{
+		alias width = maxSize!"width";
+		alias height = sumSize!"height";
+	}
+
+	/// For horizontal layouts: y positions of members, otherwise x positions of members
+	int[Items.length] orthoLayouts;
+
+	bool handleClick(int x, int y)
+	{
+		int dim = -gap / 2;
+		int offset = 0;
+		static foreach (i, Item; Items)
+		{
+			offset = dim + gap / 2;
+			dim += gap;
+			dim += __traits(getMember, Item, lengthProp);
+			if (mixin(axis) <= dim
+				&& mixin(orthoAxis) >= orthoLayouts[i]
+				&& mixin(orthoAxis) <= orthoLayouts[i] + __traits(getMember, Item, orthoProp))
+			{
+				static if (__traits(hasMember, Item, "handleClick"))
+				{
+					static if (horizontal)
+						return Item.handleClick(x - offset, y - orthoLayouts[i]);
+					else
+						return Item.handleClick(x - orthoLayouts[i], y - offset);
+				}
+				else
+					return false;
+			}
+		}
+		return false;
+	}
+
+	void layout(NVGWindow window, NVGContext ctx)
+	{
+		static foreach (Item; Items)
+			Item.layout(window, ctx);
+
+		int width = this.width;
+		int height = this.height;
+
+		static if (alignItems == Align.Start)
+			orthoLayouts[] = 0;
+		else static if (alignItems == Align.End)
+		{
+			static foreach (i, Item; Items)
+				orthoLayouts[i] = mixin(orthoProp) - __traits(getMember, Item, orthoProp);
+		}
+		else static if (alignItems == Align.Middle)
+		{
+			static foreach (i, Item; Items)
+				orthoLayouts[i] = (mixin(orthoProp) - __traits(getMember, Item, orthoProp)) / 2;
+		}
+		else
+			static assert(false);
+	}
+
+	void draw(NVGContext ctx)
+	{
+		static if (backdrop)
+		{
+			ctx.beginPath();
+			ctx.roundedRect(-4, -4, width + 8, height + 8, 4);
+			ctx.fillColor = NVGColor(0, 0, 0, 0.3);
+			ctx.fill();
+		}
+
+		auto t = ctx.currTransform;
+		int dim;
+		static foreach (i, Item; Items)
+		{
+			ctx.currTransform = t;
+			static if (horizontal)
+				ctx.translate(dim, orthoLayouts[i]);
+			else
+				ctx.translate(orthoLayouts[i], dim);
+			dim += __traits(getMember, Item, lengthProp) + gap;
+
+			Item.draw(ctx);
+		}
+	}
+}
+
+struct Toolbox
+{
+	ToolSelector toolSelector;
+	Palette palette;
+
+	mixin StackContainer!(
+		true,
+		true,
+		16,
+		Align.Middle,
+		toolSelector,
+		palette
+	);
+}
+
+enum Tool
+{
+	draw,
+	line,
+	paint,
+	fill,
+	rectSelect,
+	wand,
+}
+
+struct ToolSelector
+{
+	enum renderSize = 42;
+
+	int width, height;
+
+	Tool selected;
+
+	bool handleClick(int x, int y)
+	{
+		int i = x / renderSize;
+		if (i < 0 || i > Tool.max)
+			return false;
+
+		selected = cast(Tool) i;
+		return true;
+	}
+
+	void layout(NVGWindow window, NVGContext ctx)
+	{
+		height = renderSize;
+		width = renderSize * (Tool.max + 1);
+	}
+
+	void draw(NVGContext ctx)
+	{
+		static foreach (tool; __traits(allMembers, Tool))
+		{
+			if (selected == __traits(getMember, Tool, tool))
+			{
+				ctx.beginPath();
+				ctx.roundedRect(6, 6, 32, 32, 4);
+				ctx.strokeWidth = 2;
+				ctx.strokeColor = NVGColor.white;
+				ctx.stroke();
+			}
+
+			drawTool!(__traits(getMember, Tool, tool))(ctx);
+			ctx.translate(renderSize, 0);
+		}
+	}
+}
+
 struct Palette
 {
 	enum renderSize = 20;
@@ -705,10 +895,6 @@ struct Palette
 		int x = 0;
 		int y = -1;
 		auto t = ctx.currTransform;
-		ctx.beginPath();
-		ctx.roundedRect(-4, -4, width + 8, height + 8, 4);
-		ctx.fillColor = NVGColor(0, 0, 0, 0.3);
-		ctx.fill();
 		int[2] selectedPos;
 
 		foreach (i; 0 .. cast(int) palette.length)
@@ -940,4 +1126,155 @@ void drawShape(NVGContext ctx, const(Shape) shape)
 		else
 			ctx.lineTo(v[0], v[1]);
 	}
+}
+
+void drawTool(Tool tool)(NVGContext ctx)
+{
+	ctx.translate(22, 22);
+	scope (exit)
+		ctx.translate(-22, -22);
+	ctx.beginPath();
+	final switch (tool)
+	{
+	case Tool.draw:
+		ctx.moveTo(4, -8);
+		ctx.lineTo(8, -4);
+		ctx.lineTo(-2, 6);
+		ctx.lineTo(-6, 2);
+
+		ctx.moveTo(5, -9);
+		ctx.lineTo(7, -11);
+		ctx.lineTo(11, -7);
+		ctx.lineTo(9, -5);
+
+		ctx.moveTo(-7, 3);
+		ctx.lineTo(-3, 7);
+		ctx.lineTo(-12, 12);
+		ctx.fillColor = NVGColor.white;
+		ctx.fill();
+		break;
+	case Tool.line:
+		ctx.moveTo(3, -5);
+		ctx.lineTo(3, -10);
+		ctx.lineTo(10, -10);
+		ctx.lineTo(10, -3);
+		ctx.lineTo(5, -3);
+
+		ctx.lineTo(-3, 5);
+		ctx.lineTo(-3, 10);
+		ctx.lineTo(-10, 10);
+		ctx.lineTo(-10, 3);
+		ctx.lineTo(-5, 3);
+		ctx.fillColor = NVGColor.white;
+		ctx.fill();
+		break;
+	case Tool.paint:
+		ctx.moveTo(-5, -5);
+		ctx.lineTo(5, -15);
+
+		ctx.lineTo(7, -13);
+		ctx.lineTo(1, -7);
+		ctx.lineTo(2, -6);
+		ctx.lineTo(8, -12);
+		ctx.lineTo(11, -9);
+		ctx.lineTo(5, -3);
+		ctx.lineTo(6, -2);
+		ctx.lineTo(12, -8);
+
+		ctx.lineTo(15, -5);
+		ctx.lineTo(5, 5);
+		ctx.lineTo(2, 2);
+		ctx.lineTo(0, 2);
+		ctx.lineTo(-2, 4);
+		ctx.lineTo(-4, 8);
+		ctx.lineTo(-6, 10);
+		ctx.lineTo(-6.5, 10);
+		ctx.bezierTo(-10, 20, -20, 10, -10, 6.5);
+		ctx.lineTo(-10, 6);
+		ctx.lineTo(-8, 4);
+		ctx.lineTo(-4, 2);
+		ctx.lineTo(-2, 0);
+		ctx.lineTo(-2, -2);
+		ctx.fillColor = NVGColor.white;
+		ctx.fill();
+		break;
+	case Tool.fill:
+		ctx.moveTo(0, -11);
+		ctx.lineTo(11, 0);
+		ctx.lineTo(13, 4);
+		ctx.lineTo(11, 6);
+		ctx.lineTo(9, 4);
+		ctx.lineTo(9, 0);
+		ctx.lineTo(-3, 12);
+		ctx.lineTo(-13, 2);
+		ctx.lineTo(-3, -8);
+		ctx.lineTo(-7, -12);
+		ctx.lineTo(-6, -13);
+		ctx.lineTo(-2, -9);
+		ctx.fillColor = NVGColor.white;
+		ctx.fill();
+		break;
+	case Tool.rectSelect:
+		ctx.rect(-10, -10, 20, 20);
+		ctx.lineDash = [4, 4];
+		ctx.lineDashStart = 2;
+		ctx.strokeColor = NVGColor.white;
+		ctx.strokeWidth = 2;
+		ctx.stroke();
+		ctx.lineDash = null;
+		ctx.lineDashStart = 0;
+		break;
+	case Tool.wand:
+		void star(int x, int y)
+		{
+			ctx.moveTo(x, y - 1);
+			ctx.lineTo(x + 2, y - 2);
+			ctx.lineTo(x + 1, y);
+			ctx.lineTo(x + 2, y + 2);
+			ctx.lineTo(x, y + 1);
+			ctx.lineTo(x - 2, y + 2);
+			ctx.lineTo(x - 1, y);
+			ctx.lineTo(x - 2, y - 2);
+		}
+		ctx.moveTo(0, -5);
+		ctx.lineTo(3, -2);
+		ctx.lineTo(0, 1);
+		ctx.lineTo(-3, -2);
+		ctx.moveTo(-4, -1);
+		ctx.lineTo(-1, 2);
+		ctx.lineTo(-10, 11);
+		ctx.lineTo(-13, 8);
+		star(4, -9);
+		star(12, -7);
+		star(8, -1);
+		ctx.fillColor = NVGColor.white;
+		ctx.fill();
+		break;
+	}
+}
+
+void drawShadow(NVGContext ctx, float x, float y, float w, float h, float boxRadius, float blurRadius, NVGColor color)
+{
+	static struct Args
+	{
+		float w, h;
+		float boxRadius;
+		float blurRadius;
+		NVGColor color;
+	}
+
+	auto args = Args(w, h, boxRadius, blurRadius, color);
+	static NVGPaint[Args] paintDict;
+	auto paint = paintDict.require(args, ctx.boxGradient(
+		0, 0, w, h,
+		boxRadius,
+		blurRadius, color, NVGColor.transparent));
+
+	auto t = ctx.currTransform;
+	ctx.translate(x, y);
+	ctx.beginPath();
+	ctx.fillPaint = paint;
+	ctx.rect(-blurRadius, -blurRadius, w + blurRadius * 2, h + blurRadius * 2);
+	ctx.fill();
+	ctx.currTransform = t;
 }
