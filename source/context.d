@@ -562,12 +562,8 @@ struct Context
 
 				auto m = ctx.currTransform;
 				ctx.translate(tx, ty);
-				ctx.scissor(0, 0, 1, 1);
-				ctx.beginPath();
-				ctx.drawShape(allShapes[px.shape]);
 				ctx.fillColor = NVGColor(image.palette[px.color - 1]);
-				ctx.fill();
-				ctx.resetScissor();
+				ctx.fillShape(allShapes[px.shape]);
 				ctx.currTransform = m;
 			}
 	}
@@ -1116,12 +1112,8 @@ struct Shapebox
 				ctx.stroke();
 			}
 
-			ctx.scissor(0, 0, 1, 1);
-			ctx.beginPath();
-			ctx.drawShape(getShape(i));
 			ctx.fillColor = NVGColor.white;
-			ctx.fill();
-			ctx.resetScissor();
+			ctx.fillShape(getShape(i));
 		}
 	}
 
@@ -1195,6 +1187,19 @@ void drawShape(NVGContext ctx, const(Shape) shape)
 		else
 			ctx.lineTo(v[0], v[1]);
 	}
+}
+
+void fillShape(NVGContext ctx, const(Shape) shape)
+{
+	// anti-alias actually draws like a full stroke around the fill to achieve it,
+	// which distorts the shape we want.
+	// however disabling this seems to still have a softer edge anti aliasing for
+	// the fill, which looks fine.
+	ctx.shapeAntiAlias = false;
+	ctx.beginPath();
+	ctx.drawShape(shape);
+	ctx.fill();
+	ctx.shapeAntiAlias = true;
 }
 
 void drawTool(Tool tool)(NVGContext ctx)
