@@ -2,12 +2,14 @@ module context;
 
 import arsd.nanovega;
 import arsd.simpledisplay;
-import shapes;
 import std.algorithm;
 import std.file;
 import std.math;
 import std.meta : AliasSeq;
 import std.stdio;
+
+import render3d;
+import shapes;
 
 struct Pixel
 {
@@ -281,8 +283,8 @@ struct Context
 		toolbox
 	);
 
-	bool nanovegaInitialized;
 	NVGPaint transparentPaint;
+	Render3D render3d;
 
 	@disable this();
 	@disable this(this);
@@ -297,10 +299,6 @@ struct Context
 
 	void initNanovega(NVGContext ctx)
 	{
-		if (nanovegaInitialized)
-			return;
-		nanovegaInitialized = true;
-
 		static immutable uint[4] transparentColors = [
 			0xffffffff,
 			0xffeeeeee,
@@ -476,14 +474,15 @@ struct Context
 		window.redrawOpenGlSceneSoon();
 	}
 
+	void redrawOpengl()
+	{
+		glViewport(64, 64, 256, 256);
+		render3d.redraw(256, 256);
+	}
+
 	void redraw(NVGContext ctx)
 	{
 		redrawQueued = false;
-
-		glClearColor(0.2f, 0.2f, 0.22f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		initNanovega(ctx);
 
 		ctx.resetTransform();
 		ctx.translate(window.width * 0.5f + viewOffsetX, window.height * 0.5f + viewOffsetY);

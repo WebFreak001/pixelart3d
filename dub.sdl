@@ -3,6 +3,9 @@ authors "webfreak"
 license "GPL-3.0"
 dependency "gamut" version="~>2.3.3"
 dependency "earcut-ctfe" version="~>0.1.0"
+dependency "bindbc-opengl" version="~>1.1.0"
+
+versions "GL_33"
 
 dflags "-preview=bitfields"
 libs "freetype" "fontconfig" platform="posix"
