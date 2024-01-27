@@ -2,11 +2,14 @@ module render3d;
 
 import arsd.simpledisplay : OpenGlShader, glBufferDataSlice;
 import bindbc.opengl;
+import inmath.linalg;
 
 struct Render3D
 {
 	uint VAO, VBO, EBO;
 	OpenGlShader shader;
+	mat4 projection;
+	mat4 view;
 
 	void setupContext()
 	{
@@ -16,8 +19,11 @@ struct Render3D
 			OpenGlShader.Source(GL_VERTEX_SHADER, `
 				#version 330 core
 				layout (location = 0) in vec3 aPos;
+
+				uniform mat4 mvp;
+
 				void main() {
-					gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+					gl_Position = mvp * vec4(aPos.x, aPos.y, aPos.z, 1.0);
 				}
 			`),
 			OpenGlShader.Source(GL_FRAGMENT_SHADER, `
@@ -31,15 +37,20 @@ struct Render3D
 		);
 		// and do whatever other setup you want.
 		float[] vertices = [
-			1.0f, 1.0f, 0.0f, // top right
-			1.0f, -1.0f, 0.0f, // bottom right
-			-1.0f, -1.0f, 0.0f, // bottom left
-			-1.0f, 1.0f, 0.0f // top left
+			1.0f, 1.0f, 1.0f, // top right back
+			1.0f, -1.0f, 1.0f, // bottom right back
+			-1.0f, -1.0f, 1.0f, // bottom left back
+			-1.0f, 1.0f, 1.0f, // top left back
+			1.0f, 1.0f, -1.0f, // top right front
+			1.0f, -1.0f, -1.0f, // bottom right front
+			-1.0f, -1.0f, -1.0f, // bottom left front
+			-1.0f, 1.0f, -1.0f, // top left front
 		];
 		uint[] indices = [ // note that we start from 0!
-			0, 1, 3, // first Triangle
-			1, 2,
-			3 // second Triangle
+			0, 1, 3, // first Triangle back
+			1, 2, 3, // second Triangle back
+			4, 5, 7, // first Triangle front
+			4, 5, 6, // second Triangle front
 		];
 		glGenVertexArrays(1, &VAO);
 		// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -57,13 +68,18 @@ struct Render3D
 
 	void redraw(int width, int height)
 	{
+		projection = mat4.perspective(width, height, 30.0, 0.01, 100.0);
+		view = mat4.lookAt(vec3(0, 4.0, -10.0), vec3.zero, vec3(0, 1, 0));
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		glUseProgram(shader.shaderProgram);
 		// the shader helper class has methods to set uniforms too
+		auto mvp = projection * view * mat4.identity.rotateY(3.1415926 * 0.25);
+		glUniformMatrix4fv(shader.uniforms.mvp.id, 1, GL_TRUE, mvp.ptr);
 		shader.uniforms.mycolor.opAssign(1.0, 1.0, 0, 1.0);
 
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, null);
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, null);
 	}
 }
